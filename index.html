@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美本 & QS 世界大学知识库</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #333; line-height:1.7; }
+.container { max-width:1200px; margin:0 auto; padding:20px; }
+.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color:white; padding:48px 40px; border-radius:16px; margin-bottom:32px; text-align:center; }
+.header h1 { font-size:2.4rem; margin-bottom:8px; }
+.header p { opacity:0.8; font-size:1.1rem; }
+.search-box { max-width:600px; margin:20px auto 0; }
+.search-box input { width:100%; padding:14px 20px; border-radius:30px; border:none; font-size:1rem; outline:none; }
+
+.section-title { font-size:1.4rem; color:#1a1a2e; margin:32px 0 16px; padding-bottom:10px; border-bottom:3px solid #3498db; display:flex; align-items:center; justify-content:space-between; }
+.school-count { font-size:0.9rem; color:#888; font-weight:normal; }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px; margin-bottom:24px; }
+.card { background:white; border-radius:12px; padding:20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.15s, box-shadow 0.15s; cursor:pointer; text-decoration:none; color:inherit; display:block; border-left:4px solid transparent; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); border-left-color: #3498db; }
+.card .name { font-size:1.05rem; font-weight:700; color:#1a1a2e; margin-bottom:4px; }
+.card .en-name { font-size:0.8rem; color:#999; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card .meta { display:flex; gap:8px; flex-wrap:wrap; }
+.card .mini-badge { display:inline-block; padding:2px 10px; border-radius:10px; font-size:0.75rem; font-weight:600; }
+.mini-us { background: #fdecea; color: #c0392b; }
+.mini-qs { background: #eaf2fd; color: #2471a3; }
+.mini-diff { color:white; }
+.card .location { font-size:0.8rem; color:#777; margin-top:8px; }
+
+.legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:8px; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:0.8rem; color:#666; }
+.legend-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+.footer { text-align:center; color:#aaa; font-size:0.8rem; margin:40px 0 20px; padding-top:20px; border-top:1px solid #e0e0e0; }
+.no-results { display:none; text-align:center; padding:40px; color:#999; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+  <h1>🎓 美本申请 · 大学知识库</h1>
+  <p>US News Top 100 综合大学 · 九维度深度档案 · 含校园图片与交互地图</p>
+  <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">
+    涵盖：学校介绍 | 地理位置详解 | 王牌专业 | 申请策略 | 城市经济 | 就业数据
+  </div>
+  <div class="search-box">
+    <input type="text" id="search" placeholder="🔍 搜索学校名称（中英文）或城市..." oninput="filterSchools()">
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot" style="background:#c0392b"></span> 极高难度</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#e74c3c"></span> 很高难度</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#e67e22"></span> 高难度</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#f39c12"></span> 中等偏高</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#27ae60"></span> 中等</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#2980b9"></span> 中等偏低</div>
+</div>
+
+<div class="section-title">US News Top 100 综合大学 <span class="school-count" id="count-display"></span></div>
+<div class="grid" id="school-grid"></div>
+<div class="no-results" id="no-results">未找到匹配的学校</div>
+
+<div class="footer">
+  留学规划知识库 · 数据来源: US News 2025 / QS 2026 / 各校官网<br>
+  大陆录取率为基于行业经验+有限公开数据的综合估算 · 仅供内部参考
+</div>
+</div>
+
+<script>
+const schools = [{"name_cn": "普林斯顿大学", "name_en": "Princeton University", "us_rank": "1", "qs_rank": "25", "location": "普林斯顿, NJ", "difficulty": "极高", "file": "Princeton_University.html"}, {"name_cn": "麻省理工学院", "name_en": "Massachusetts Institute of Technology", "us_rank": "2", "qs_rank": "1", "location": "剑桥, MA", "difficulty": "极高", "file": "Massachusetts_Institute_of_Technology.html"}, {"name_cn": "哈佛大学", "name_en": "Harvard University", "us_rank": "3", "qs_rank": "5", "location": "剑桥, MA", "difficulty": "极高", "file": "Harvard_University.html"}, {"name_cn": "斯坦福大学", "name_en": "Stanford University", "us_rank": "4", "qs_rank": "3", "location": "斯坦福, CA", "difficulty": "极高", "file": "Stanford_University.html"}, {"name_cn": "耶鲁大学", "name_en": "Yale University", "us_rank": "5", "qs_rank": "21", "location": "纽黑文, CT", "difficulty": "极高", "file": "Yale_University.html"}, {"name_cn": "加州理工学院", "name_en": "California Institute of Technology", "us_rank": "6", "qs_rank": "10", "location": "帕萨迪纳, CA", "difficulty": "极高", "file": "California_Institute_of_Technology.html"}, {"name_cn": "杜克大学", "name_en": "Duke University", "us_rank": "6", "qs_rank": "61", "location": "达勒姆, NC", "difficulty": "极高", "file": "Duke_University.html"}, {"name_cn": "约翰霍普金斯大学", "name_en": "Johns Hopkins University", "us_rank": "6", "qs_rank": "24", "location": "巴尔的摩, MD", "difficulty": "极高", "file": "Johns_Hopkins_University.html"}, {"name_cn": "西北大学", "name_en": "Northwestern University", "us_rank": "6", "qs_rank": "29", "location": "埃文斯顿, IL", "difficulty": "极高", "file": "Northwestern_University.html"}, {"name_cn": "宾夕法尼亚大学", "name_en": "University of Pennsylvania", "us_rank": "10", "qs_rank": "15", "location": "费城, PA", "difficulty": "极高", "file": "University_of_Pennsylvania.html"}, {"name_cn": "康奈尔大学", "name_en": "Cornell University", "us_rank": "11", "qs_rank": "16", "location": "伊萨卡, NY", "difficulty": "极高", "file": "Cornell_University.html"}, {"name_cn": "芝加哥大学", "name_en": "University of Chicago", "us_rank": "11", "qs_rank": "13", "location": "芝加哥, IL", "difficulty": "极高", "file": "University_of_Chicago.html"}, {"name_cn": "布朗大学", "name_en": "Brown University", "us_rank": "13", "qs_rank": "63", "location": "普罗维登斯, RI", "difficulty": "极高", "file": "Brown_University.html"}, {"name_cn": "哥伦比亚大学", "name_en": "Columbia University", "us_rank": "13", "qs_rank": "37", "location": "纽约市, NY", "difficulty": "极高", "file": "Columbia_University.html"}, {"name_cn": "达特茅斯学院", "name_en": "Dartmouth College", "us_rank": "15", "qs_rank": "59", "location": "汉诺威, NH", "difficulty": "极高", "file": "Dartmouth_College.html"}, {"name_cn": "加州大学洛杉矶分校", "name_en": "University of California, Los Angeles", "us_rank": "15", "qs_rank": "42", "location": "洛杉矶, CA", "difficulty": "极高", "file": "University_of_California__Los_Angeles.html"}, {"name_cn": "加州大学伯克利分校", "name_en": "University of California, Berkeley", "us_rank": "17", "qs_rank": "17", "location": "伯克利, CA", "difficulty": "极高", "file": "University_of_California__Berkeley.html"}, {"name_cn": "莱斯大学", "name_en": "Rice University", "us_rank": "18", "qs_rank": "171", "location": "休斯顿, TX", "difficulty": "很高", "file": "Rice_University.html"}, {"name_cn": "圣母大学", "name_en": "University of Notre Dame", "us_rank": "18", "qs_rank": "157", "location": "南本德, IN", "difficulty": "很高", "file": "University_of_Notre_Dame.html"}, {"name_cn": "范德堡大学", "name_en": "Vanderbilt University", "us_rank": "18", "qs_rank": "217", "location": "纳什维尔, TN", "difficulty": "很高", "file": "Vanderbilt_University.html"}, {"name_cn": "卡内基梅隆大学", "name_en": "Carnegie Mellon University", "us_rank": "21", "qs_rank": "47", "location": "匹兹堡, PA", "difficulty": "极高", "file": "Carnegie_Mellon_University.html"}, {"name_cn": "密歇根大学安娜堡分校", "name_en": "University of Michigan, Ann Arbor", "us_rank": "21", "qs_rank": "33", "location": "安娜堡, MI", "difficulty": "很高", "file": "University_of_Michigan__Ann_Arbor.html"}, {"name_cn": "圣路易斯华盛顿大学", "name_en": "Washington University in St. Louis", "us_rank": "21", "qs_rank": "118", "location": "圣路易斯, MO", "difficulty": "很高", "file": "Washington_University_in_St__Louis.html"}, {"name_cn": "埃默里大学", "name_en": "Emory University", "us_rank": "24", "qs_rank": "199", "location": "亚特兰大, GA", "difficulty": "很高", "file": "Emory_University.html"}, {"name_cn": "乔治城大学", "name_en": "Georgetown University", "us_rank": "24", "qs_rank": "208", "location": "华盛顿, DC", "difficulty": "极高", "file": "Georgetown_University.html"}, {"name_cn": "弗吉尼亚大学", "name_en": "University of Virginia", "us_rank": "24", "qs_rank": "185", "location": "夏洛茨维尔, VA", "difficulty": "很高", "file": "University_of_Virginia.html"}, {"name_cn": "北卡罗来纳大学教堂山分校", "name_en": "University of North Carolina at Chapel Hill", "us_rank": "27", "qs_rank": "89", "location": "教堂山, NC", "difficulty": "高", "file": "University_of_North_Carolina_at_Chapel_Hill.html"}, {"name_cn": "南加州大学", "name_en": "University of Southern California", "us_rank": "27", "qs_rank": "116", "location": "洛杉矶, CA", "difficulty": "高", "file": "University_of_Southern_California.html"}, {"name_cn": "加州大学圣地亚哥分校", "name_en": "University of California, San Diego", "us_rank": "29", "qs_rank": "76", "location": "拉霍亚, CA", "difficulty": "高", "file": "University_of_California__San_Diego.html"}, {"name_cn": "纽约大学", "name_en": "New York University", "us_rank": "30", "qs_rank": "38", "location": "纽约市, NY", "difficulty": "高", "file": "New_York_University.html"}, {"name_cn": "佛罗里达大学", "name_en": "University of Florida", "us_rank": "30", "qs_rank": "168", "location": "盖恩斯维尔, FL", "difficulty": "中等", "file": "University_of_Florida.html"}, {"name_cn": "德克萨斯大学奥斯汀分校", "name_en": "University of Texas at Austin", "us_rank": "30", "qs_rank": "45", "location": "奥斯汀, TX", "difficulty": "高", "file": "University_of_Texas_at_Austin.html"}, {"name_cn": "佐治亚理工学院", "name_en": "Georgia Institute of Technology", "us_rank": "33", "qs_rank": "114", "location": "亚特兰大, GA", "difficulty": "高", "file": "Georgia_Institute_of_Technology.html"}, {"name_cn": "加州大学戴维斯分校", "name_en": "University of California, Davis", "us_rank": "33", "qs_rank": "118", "location": "戴维斯, CA", "difficulty": "中等偏高", "file": "University_of_California__Davis.html"}, {"name_cn": "加州大学尔湾分校", "name_en": "University of California, Irvine", "us_rank": "33", "qs_rank": "353", "location": "尔湾, CA", "difficulty": "中等偏高", "file": "University_of_California__Irvine.html"}, {"name_cn": "伊利诺伊大学香槟分校", "name_en": "University of Illinois Urbana-Champaign", "us_rank": "33", "qs_rank": "58", "location": "香槟-厄巴纳, IL", "difficulty": "中等", "file": "University_of_Illinois_Urbana_Champaign.html"}, {"name_cn": "波士顿学院", "name_en": "Boston College", "us_rank": "37", "qs_rank": "451", "location": "栗子山, MA", "difficulty": "很高", "file": "Boston_College.html"}, {"name_cn": "塔夫茨大学", "name_en": "Tufts University", "us_rank": "37", "qs_rank": "220", "location": "梅德福, MA", "difficulty": "很高", "file": "Tufts_University.html"}, {"name_cn": "加州大学圣芭芭拉分校", "name_en": "University of California, Santa Barbara", "us_rank": "39", "qs_rank": "146", "location": "圣芭芭拉, CA", "difficulty": "中等偏高", "file": "University_of_California__Santa_Barbara.html"}, {"name_cn": "威斯康星大学麦迪逊分校", "name_en": "University of Wisconsin-Madison", "us_rank": "39", "qs_rank": "86", "location": "麦迪逊, WI", "difficulty": "中等", "file": "University_of_Wisconsin_Madison.html"}, {"name_cn": "波士顿大学", "name_en": "Boston University", "us_rank": "41", "qs_rank": "80", "location": "波士顿, MA", "difficulty": "很高", "file": "Boston_University.html"}, {"name_cn": "俄亥俄州立大学", "name_en": "Ohio State University", "us_rank": "41", "qs_rank": "120", "location": "哥伦布, OH", "difficulty": "中等", "file": "Ohio_State_University.html"}, {"name_cn": "罗格斯大学", "name_en": "Rutgers University–New Brunswick", "us_rank": "41", "qs_rank": "386", "location": "新不伦瑞克, NJ", "difficulty": "中等", "file": "Rutgers_University_New_Brunswick.html"}, {"name_cn": "马里兰大学帕克分校", "name_en": "University of Maryland, College Park", "us_rank": "44", "qs_rank": "131", "location": "学院公园市, MD", "difficulty": "中等", "file": "University_of_Maryland__College_Park.html"}, {"name_cn": "罗切斯特大学", "name_en": "University of Rochester", "us_rank": "44", "qs_rank": "205", "location": "罗切斯特, NY", "difficulty": "高", "file": "University_of_Rochester.html"}, {"name_cn": "里海大学", "name_en": "Lehigh University", "us_rank": "46", "qs_rank": "358", "location": "伯利恒, PA", "difficulty": "高", "file": "Lehigh_University.html"}, {"name_cn": "普渡大学", "name_en": "Purdue University", "us_rank": "46", "qs_rank": "99", "location": "西拉斐特, IN", "difficulty": "中等", "file": "Purdue_University.html"}, {"name_cn": "佐治亚大学", "name_en": "University of Georgia", "us_rank": "46", "qs_rank": "475", "location": "雅典, GA", "difficulty": "中等", "file": "University_of_Georgia.html"}, {"name_cn": "华盛顿大学", "name_en": "University of Washington", "us_rank": "46", "qs_rank": "7(全球)", "location": "西雅图, WA", "difficulty": "中等", "file": "University_of_Washington.html"}, {"name_cn": "维克森林大学", "name_en": "Wake Forest University", "us_rank": "46", "qs_rank": "326", "location": "温斯顿-塞勒姆, NC", "difficulty": "很高", "file": "Wake_Forest_University.html"}, {"name_cn": "凯斯西储大学", "name_en": "Case Western Reserve University", "us_rank": "51", "qs_rank": "201", "location": "克利夫兰, OH", "difficulty": "高", "file": "Case_Western_Reserve_University.html"}, {"name_cn": "德克萨斯农工大学", "name_en": "Texas A&M University", "us_rank": "51", "qs_rank": "134", "location": "学院站, TX", "difficulty": "中等", "file": "Texas_A_M_University.html"}, {"name_cn": "弗吉尼亚理工大学", "name_en": "Virginia Tech", "us_rank": "51", "qs_rank": "251", "location": "布莱克斯堡, VA", "difficulty": "中等", "file": "Virginia_Tech.html"}, {"name_cn": "佛罗里达州立大学", "name_en": "Florida State University", "us_rank": "54", "qs_rank": "461", "location": "塔拉哈西, FL", "difficulty": "中等", "file": "Florida_State_University.html"}, {"name_cn": "东北大学", "name_en": "Northeastern University", "us_rank": "54", "qs_rank": "378", "location": "波士顿, MA", "difficulty": "高", "file": "Northeastern_University.html"}, {"name_cn": "明尼苏达大学双城分校", "name_en": "University of Minnesota Twin Cities", "us_rank": "54", "qs_rank": "189", "location": "明尼阿波利斯, MN", "difficulty": "中等", "file": "University_of_Minnesota_Twin_Cities.html"}, {"name_cn": "威廉与玛丽学院", "name_en": "William & Mary", "us_rank": "54", "qs_rank": "612", "location": "威廉斯堡, VA", "difficulty": "高", "file": "William___Mary.html"}, {"name_cn": "北卡罗莱纳州立大学", "name_en": "North Carolina State University", "us_rank": "58", "qs_rank": "357", "location": "罗利, NC", "difficulty": "中等", "file": "North_Carolina_State_University.html"}, {"name_cn": "纽约州立大学石溪分校", "name_en": "Stony Brook University", "us_rank": "58", "qs_rank": "396", "location": "石溪, NY", "difficulty": "中等", "file": "Stony_Brook_University.html"}, {"name_cn": "加州大学默塞德分校", "name_en": "University of California, Merced", "us_rank": "58", "qs_rank": "671", "location": "默塞德, CA", "difficulty": "中等偏低", "file": "University_of_California__Merced.html"}, {"name_cn": "马萨诸塞大学阿默斯特分校", "name_en": "University of Massachusetts Amherst", "us_rank": "58", "qs_rank": "219", "location": "阿默斯特, MA", "difficulty": "中等", "file": "University_of_Massachusetts_Amherst.html"}, {"name_cn": "布兰迪斯大学", "name_en": "Brandeis University", "us_rank": "63", "qs_rank": "421", "location": "沃尔瑟姆, MA", "difficulty": "高", "file": "Brandeis_University.html"}, {"name_cn": "乔治华盛顿大学", "name_en": "George Washington University", "us_rank": "63", "qs_rank": "340", "location": "华盛顿, DC", "difficulty": "高", "file": "George_Washington_University.html"}, {"name_cn": "密歇根州立大学", "name_en": "Michigan State University", "us_rank": "63", "qs_rank": "140", "location": "东兰辛, MI", "difficulty": "中等偏低", "file": "Michigan_State_University.html"}, {"name_cn": "宾夕法尼亚州立大学", "name_en": "Penn State University", "us_rank": "63", "qs_rank": "83", "location": "大学公园, PA", "difficulty": "中等", "file": "Penn_State_University.html"}, {"name_cn": "圣塔克拉拉大学", "name_en": "Santa Clara University", "us_rank": "63", "qs_rank": "666", "location": "圣塔克拉拉, CA", "difficulty": "高", "file": "Santa_Clara_University.html"}];
+</script>
+<script>
+const grid = document.getElementById('school-grid');
+const noResults = document.getElementById('no-results');
+const countDisplay = document.getElementById('count-display');
+
+function renderSchools(filtered) {
+  grid.innerHTML = '';
+  const list = filtered || schools;
+  countDisplay.textContent = `共 ${list.length} 所`;
+  if (list.length === 0) {
+    noResults.style.display = 'block';
+    grid.style.display = 'none';
+    return;
+  }
+  noResults.style.display = 'none';
+  grid.style.display = 'grid';
+  list.forEach(s => {
+    const card = document.createElement('a');
+    card.className = 'card';
+    card.href = s.file;
+    const diffColor = {"极高":"#c0392b","很高":"#e74c3c","高":"#e67e22","中等偏高":"#f39c12","中等":"#27ae60","中等偏低":"#2980b9"}[s.difficulty] || '#888';
+    card.innerHTML = `
+      <div class="name">${s.name_cn}</div>
+      <div class="en-name">${s.name_en}</div>
+      <div class="meta">
+        ${s.us_rank && s.us_rank !== '-' ? `<span class="mini-badge mini-us">US #${s.us_rank}</span>` : ''}
+        ${s.qs_rank && s.qs_rank !== '-' ? `<span class="mini-badge mini-qs">QS #${s.qs_rank}</span>` : ''}
+        <span class="mini-badge mini-diff" style="background:${diffColor}">${s.difficulty}</span>
+      </div>
+      <div class="location">📍 ${s.location}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function filterSchools() {
+  const q = document.getElementById('search').value.toLowerCase();
+  if (!q) { renderSchools(); return; }
+  const filtered = schools.filter(s =>
+    s.name_cn.toLowerCase().includes(q) ||
+    s.name_en.toLowerCase().includes(q) ||
+    s.location.toLowerCase().includes(q)
+  );
+  renderSchools(filtered);
+}
+
+renderSchools();
+</script>
+</body>
+</html>
