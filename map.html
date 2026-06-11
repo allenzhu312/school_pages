@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美国大学分布地图 - 美本知识库</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background:#1a1a2e; }
+
+.topbar {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color:white; padding:16px 24px; display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px; border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.topbar h1 { font-size:1.3rem; }
+.topbar .nav-links { display:flex; gap:12px; align-items:center; }
+.topbar a { color:white; text-decoration:none; opacity:0.85; font-size:0.9rem; padding:6px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.2); transition:all 0.2s; }
+.topbar a:hover { opacity:1; background:rgba(255,255,255,0.1); }
+.topbar a.active { background: #3498db; border-color:#3498db; }
+.topbar .stats { font-size:0.85rem; opacity:0.7; }
+
+#map { height: calc(100vh - 70px); width:100%; }
+
+.legend {
+  background:white; padding:14px 18px; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.3);
+  font-size:0.82rem; line-height:1.8;
+}
+.legend h4 { margin-bottom:8px; color:#1a1a2e; font-size:0.95rem; }
+.legend i { display:inline-block; width:14px; height:14px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+
+.popup-school { font-size:0.85rem; }
+.popup-school b { font-size:0.95rem; color:#1a1a2e; }
+.popup-school .pop-en { color:#888; font-size:0.75rem; margin-bottom:4px; }
+.popup-school .pop-meta { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0; }
+.popup-school .pop-badge { padding:1px 8px; border-radius:8px; font-size:0.7rem; font-weight:600; color:white; }
+.popup-school .pop-link { display:inline-block; margin-top:6px; color:#3498db; text-decoration:none; font-size:0.8rem; font-weight:600; }
+.popup-school .pop-link:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🗺️ 美国大学分布地图</h1>
+  <div class="stats" id="stats">加载中...</div>
+  <div class="nav-links">
+    <a href="javascript:void(0)" onclick="filterTier('all')" id="btn-all" class="active">全部学校</a>
+    <a href="javascript:void(0)" onclick="filterTier('top10')" id="btn-top10">Top 10</a>
+    <a href="javascript:void(0)" onclick="filterTier('top20')" id="btn-top20">Top 20</a>
+    <a href="javascript:void(0)" onclick="filterTier('top30')" id="btn-top30">Top 30</a>
+    <a href="javascript:void(0)" onclick="filterTier('top50')" id="btn-top50">Top 50</a>
+    <a href="index.html">📋 返回列表</a>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+// School data - injected by Python
+var SCHOOLS = [{"cn": "波士顿学院", "en": "Boston College", "lat": 42.335, "lon": -71.1706, "file": "Boston_College.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "栗子山, MA", "type": "私立", "difficulty": "很高", "accept_rate": "~17%", "tuition": "67,680"}, {"cn": "波士顿大学", "en": "Boston University", "lat": 42.34888889, "lon": -71.10027778, "file": "Boston_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "波士顿, MA", "type": "私立", "difficulty": "很高", "accept_rate": "~14%", "tuition": "65,168"}, {"cn": "布兰迪斯大学", "en": "Brandeis University", "lat": 42.365664, "lon": -71.259742, "file": "Brandeis_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "沃尔瑟姆, MA", "type": "私立", "difficulty": "高", "accept_rate": "~38%", "tuition": "65,790"}, {"cn": "布朗大学", "en": "Brown University", "lat": 41.826, "lon": -71.403, "file": "Brown_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "普罗维登斯, RI", "type": "私立", "difficulty": "极高", "accept_rate": "~5.2%", "tuition": "68,230"}, {"cn": "加州理工学院", "en": "California Institute of Technology", "lat": 34.1375, "lon": -118.125, "file": "California_Institute_of_Technology.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "帕萨迪纳, CA", "type": "私立", "difficulty": "极高", "accept_rate": "~3.9%", "tuition": "63,255"}, {"cn": "卡内基梅隆大学", "en": "Carnegie Mellon University", "lat": 40.4432, "lon": -79.9428, "file": "Carnegie_Mellon_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "匹兹堡, PA", "type": "私立", "difficulty": "极高", "accept_rate": "~11.5%", "tuition": "63,829"}, {"cn": "凯斯西储大学", "en": "Case Western Reserve University", "lat": 41.5044, "lon": -81.6083, "file": "Case_Western_Reserve_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "克利夫兰, OH", "type": "私立", "difficulty": "高", "accept_rate": "~30%", "tuition": "64,526"}, {"cn": "哥伦比亚大学", "en": "Columbia University", "lat": 40.8075, "lon": -73.96194444, "file": "Columbia_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "纽约市, NY", "type": "私立", "difficulty": "极高", "accept_rate": "~4.0%", "tuition": "68,171"}, {"cn": "康奈尔大学", "en": "Cornell University", "lat": 42.4492, "lon": -76.4839, "file": "Cornell_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "伊萨卡, NY", "type": "私立/公立混合", "difficulty": "极高", "accept_rate": "~8.4%", "tuition": "66,014"}, {"cn": "达特茅斯学院", "en": "Dartmouth College", "lat": 43.70333333, "lon": -72.28833333, "file": "Dartmouth_College.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "汉诺威, NH", "type": "私立", "difficulty": "极高", "accept_rate": "~6.2%", "tuition": "65,511"}, {"cn": "杜克大学", "en": "Duke University", "lat": 36.00138889, "lon": -78.93833333, "file": "Duke_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "达勒姆, NC", "type": "私立", "difficulty": "极高", "accept_rate": "~6.3%", "tuition": "65,805"}, {"cn": "埃默里大学", "en": "Emory University", "lat": 33.791, "lon": -84.3239, "file": "Emory_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "亚特兰大, GA", "type": "私立", "difficulty": "很高", "accept_rate": "~13%", "tuition": "63,058"}, {"cn": "佛罗里达州立大学", "en": "Florida State University", "lat": 30.4423, "lon": -84.2925, "file": "Florida_State_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "塔拉哈西, FL", "type": "公立", "difficulty": "中等", "accept_rate": "~37%", "tuition": "$21,663(外州)"}, {"cn": "乔治华盛顿大学", "en": "George Washington University", "lat": 38.8997, "lon": -77.0485, "file": "George_Washington_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "华盛顿, DC", "type": "私立", "difficulty": "高", "accept_rate": "~50%", "tuition": "65,260"}, {"cn": "乔治城大学", "en": "Georgetown University", "lat": 38.90722222, "lon": -77.07277778, "file": "Georgetown_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "华盛顿, DC", "type": "私立", "difficulty": "极高", "accept_rate": "~12%", "tuition": "65,082"}, {"cn": "佐治亚理工学院", "en": "Georgia Institute of Technology", "lat": 33.776, "lon": -84.396, "file": "Georgia_Institute_of_Technology.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "亚特兰大, GA", "type": "公立", "difficulty": "高", "accept_rate": "~16%", "tuition": "$33,964(外州)"}, {"cn": "哈佛大学", "en": "Harvard University", "lat": 42.37444444, "lon": -71.11694444, "file": "Harvard_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "剑桥, MA", "type": "私立", "difficulty": "极高", "accept_rate": "~3.6%", "tuition": "59,076"}, {"cn": "约翰霍普金斯大学", "en": "Johns Hopkins University", "lat": 39.32888889, "lon": -76.62027778, "file": "Johns_Hopkins_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "巴尔的摩, MD", "type": "私立", "difficulty": "极高", "accept_rate": "~7.5%", "tuition": "62,840"}, {"cn": "里海大学", "en": "Lehigh University", "lat": 40.60611111, "lon": -75.37722222, "file": "Lehigh_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "伯利恒, PA", "type": "私立", "difficulty": "高", "accept_rate": "~37%", "tuition": "63,930"}, {"cn": "麻省理工学院", "en": "Massachusetts Institute of Technology", "lat": 42.3597, "lon": -71.0919, "file": "Massachusetts_Institute_of_Technology.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "剑桥, MA", "type": "私立", "difficulty": "极高", "accept_rate": "~4.8%", "tuition": "60,156"}, {"cn": "密歇根州立大学", "en": "Michigan State University", "lat": 42.725, "lon": -84.48, "file": "Michigan_State_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "东兰辛, MI", "type": "公立", "difficulty": "中等偏低", "accept_rate": "~84%", "tuition": "$44,200(外州)"}, {"cn": "纽约大学", "en": "New York University", "lat": 40.73, "lon": -73.995, "file": "New_York_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "纽约市, NY", "type": "私立", "difficulty": "高", "accept_rate": "~8%", "tuition": "60,438"}, {"cn": "北卡罗莱纳州立大学", "en": "North Carolina State University", "lat": 35.78722222, "lon": -78.67055556, "file": "North_Carolina_State_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "罗利, NC", "type": "公立", "difficulty": "中等", "accept_rate": "~47%", "tuition": "$32,854(外州)"}, {"cn": "东北大学", "en": "Northeastern University", "lat": 42.3398, "lon": -71.0892, "file": "Northeastern_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "波士顿, MA", "type": "私立", "difficulty": "高", "accept_rate": "~6.8%", "tuition": "64,990"}, {"cn": "西北大学", "en": "Northwestern University", "lat": 42.05583333, "lon": -87.67472222, "file": "Northwestern_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "埃文斯顿, IL", "type": "私立", "difficulty": "极高", "accept_rate": "~7.2%", "tuition": "65,997"}, {"cn": "俄亥俄州立大学", "en": "Ohio State University", "lat": 40.0, "lon": -83.0125, "file": "Ohio_State_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "哥伦布, OH", "type": "公立", "difficulty": "中等", "accept_rate": "~53%", "tuition": "$37,916(外州)"}, {"cn": "宾夕法尼亚州立大学", "en": "Penn State University", "lat": 40.79833333, "lon": -77.86, "file": "Penn_State_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "大学公园, PA", "type": "公立", "difficulty": "中等", "accept_rate": "~55%", "tuition": "$40,412(外州)"}, {"cn": "普林斯顿大学", "en": "Princeton University", "lat": 40.34527778, "lon": -74.65611111, "file": "Princeton_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "普林斯顿, NJ", "type": "私立", "difficulty": "极高", "accept_rate": "~4.5%", "tuition": "59,710"}, {"cn": "普渡大学", "en": "Purdue University", "lat": 40.425, "lon": -86.92305556, "file": "Purdue_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "西拉斐特, IN", "type": "公立", "difficulty": "中等", "accept_rate": "~53%", "tuition": "$31,104(外州)"}, {"cn": "莱斯大学", "en": "Rice University", "lat": 29.71694444, "lon": -95.40277778, "file": "Rice_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "休斯顿, TX", "type": "私立", "difficulty": "很高", "accept_rate": "~8.7%", "tuition": "58,128"}, {"cn": "罗格斯大学", "en": "Rutgers University–New Brunswick", "lat": 40.5025, "lon": -74.44861111, "file": "Rutgers_University_New_Brunswick.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "新不伦瑞克, NJ", "type": "公立", "difficulty": "中等", "accept_rate": "~65%", "tuition": "$36,408(外州)"}, {"cn": "圣塔克拉拉大学", "en": "Santa Clara University", "lat": 37.3495, "lon": -121.9388, "file": "Santa_Clara_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "圣塔克拉拉, CA", "type": "私立", "difficulty": "高", "accept_rate": "~53%", "tuition": "60,639"}, {"cn": "斯坦福大学", "en": "Stanford University", "lat": 37.4275, "lon": -122.17, "file": "Stanford_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "斯坦福, CA", "type": "私立", "difficulty": "极高", "accept_rate": "~3.9%", "tuition": "62,484"}, {"cn": "纽约州立大学石溪分校", "en": "Stony Brook University", "lat": 40.917, "lon": -73.124, "file": "Stony_Brook_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "石溪, NY", "type": "公立", "difficulty": "中等", "accept_rate": "~49%", "tuition": "$32,176(外州)"}, {"cn": "德克萨斯农工大学", "en": "Texas A&M University", "lat": 30.6187, "lon": -96.3365, "file": "Texas_A_M_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "学院站, TX", "type": "公立", "difficulty": "中等", "accept_rate": "~62%", "tuition": "$42,472(外州)"}, {"cn": "塔夫茨大学", "en": "Tufts University", "lat": 42.4075, "lon": -71.119, "file": "Tufts_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "梅德福, MA", "type": "私立", "difficulty": "很高", "accept_rate": "~11%", "tuition": "68,556"}, {"cn": "加州大学伯克利分校", "en": "University of California, Berkeley", "lat": 37.8719, "lon": -122.2583, "file": "University_of_California__Berkeley.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "伯克利, CA", "type": "公立", "difficulty": "极高", "accept_rate": "~12%", "tuition": "$48,018(外州)"}, {"cn": "加州大学戴维斯分校", "en": "University of California, Davis", "lat": 38.54, "lon": -121.75, "file": "University_of_California__Davis.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "戴维斯, CA", "type": "公立", "difficulty": "中等偏高", "accept_rate": "~42%", "tuition": "$46,992(外州)"}, {"cn": "加州大学尔湾分校", "en": "University of California, Irvine", "lat": 33.6459, "lon": -117.8428, "file": "University_of_California__Irvine.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "尔湾, CA", "type": "公立", "difficulty": "中等偏高", "accept_rate": "~26%", "tuition": "$47,224(外州)"}, {"cn": "加州大学洛杉矶分校", "en": "University of California, Los Angeles", "lat": 34.0722, "lon": -118.4427, "file": "University_of_California__Los_Angeles.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "洛杉矶, CA", "type": "公立", "difficulty": "极高", "accept_rate": "~9.3%", "tuition": "$44,524(外州)"}, {"cn": "加州大学默塞德分校", "en": "University of California, Merced", "lat": 37.366, "lon": -120.4235, "file": "University_of_California__Merced.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "默塞德, CA", "type": "公立", "difficulty": "中等偏低", "accept_rate": "~90%", "tuition": "$45,882(外州)"}, {"cn": "加州大学圣地亚哥分校", "en": "University of California, San Diego", "lat": 32.8801, "lon": -117.234, "file": "University_of_California__San_Diego.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "拉霍亚, CA", "type": "公立", "difficulty": "高", "accept_rate": "~25%", "tuition": "$48,660(外州)"}, {"cn": "加州大学圣芭芭拉分校", "en": "University of California, Santa Barbara", "lat": 34.4139, "lon": -119.8489, "file": "University_of_California__Santa_Barbara.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "圣芭芭拉, CA", "type": "公立", "difficulty": "中等偏高", "accept_rate": "~28%", "tuition": "$46,998(外州)"}, {"cn": "芝加哥大学", "en": "University of Chicago", "lat": 41.78972222, "lon": -87.59972222, "file": "University_of_Chicago.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "芝加哥, IL", "type": "私立", "difficulty": "极高", "accept_rate": "~5.4%", "tuition": "65,619"}, {"cn": "佛罗里达大学", "en": "University of Florida", "lat": 29.6475, "lon": -82.345, "file": "University_of_Florida.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "盖恩斯维尔, FL", "type": "公立", "difficulty": "中等", "accept_rate": "~23%", "tuition": "$28,658(外州)"}, {"cn": "佐治亚大学", "en": "University of Georgia", "lat": 33.9558, "lon": -83.3745, "file": "University_of_Georgia.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "雅典, GA", "type": "公立", "difficulty": "中等", "accept_rate": "~43%", "tuition": "$31,108(外州)"}, {"cn": "伊利诺伊大学香槟分校", "en": "University of Illinois Urbana-Champaign", "lat": 40.107, "lon": -88.2272, "file": "University_of_Illinois_Urbana_Champaign.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "香槟-厄巴纳, IL", "type": "公立", "difficulty": "中等", "accept_rate": "~44%", "tuition": "$37,900(外州)"}, {"cn": "马里兰大学帕克分校", "en": "University of Maryland, College Park", "lat": 38.9881, "lon": -76.9425, "file": "University_of_Maryland__College_Park.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "学院公园市, MD", "type": "公立", "difficulty": "中等", "accept_rate": "~44%", "tuition": "$41,186(外州)"}, {"cn": "马萨诸塞大学阿默斯特分校", "en": "University of Massachusetts Amherst", "lat": 42.38888889, "lon": -72.52777778, "file": "University_of_Massachusetts_Amherst.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "阿默斯特, MA", "type": "公立", "difficulty": "中等", "accept_rate": "~58%", "tuition": "$39,957(外州)"}, {"cn": "密歇根大学安娜堡分校", "en": "University of Michigan, Ann Arbor", "lat": 42.278, "lon": -83.7382, "file": "University_of_Michigan__Ann_Arbor.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "安娜堡, MI", "type": "公立", "difficulty": "很高", "accept_rate": "~18%", "tuition": "$58,072(外州)"}, {"cn": "明尼苏达大学双城分校", "en": "University of Minnesota Twin Cities", "lat": 44.975, "lon": -93.23527778, "file": "University_of_Minnesota_Twin_Cities.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "明尼阿波利斯, MN", "type": "公立", "difficulty": "中等", "accept_rate": "~73%", "tuition": "$37,642(外州)"}, {"cn": "北卡罗来纳大学教堂山分校", "en": "University of North Carolina at Chapel Hill", "lat": 35.90861111, "lon": -79.04916667, "file": "University_of_North_Carolina_at_Chapel_Hill.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "教堂山, NC", "type": "公立", "difficulty": "高", "accept_rate": "~17%", "tuition": "$39,338(外州)"}, {"cn": "圣母大学", "en": "University of Notre Dame", "lat": 41.7, "lon": -86.23888889, "file": "University_of_Notre_Dame.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "南本德, IN", "type": "私立", "difficulty": "很高", "accept_rate": "~13%", "tuition": "63,534"}, {"cn": "宾夕法尼亚大学", "en": "University of Pennsylvania", "lat": 39.9522, "lon": -75.1932, "file": "University_of_Pennsylvania.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "费城, PA", "type": "私立", "difficulty": "极高", "accept_rate": "~5.9%", "tuition": "66,104"}, {"cn": "罗切斯特大学", "en": "University of Rochester", "lat": 43.128333, "lon": -77.628333, "file": "University_of_Rochester.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "罗切斯特, NY", "type": "私立", "difficulty": "高", "accept_rate": "~38%", "tuition": "64,348"}, {"cn": "南加州大学", "en": "University of Southern California", "lat": 34.0206, "lon": -118.2848, "file": "University_of_Southern_California.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "洛杉矶, CA", "type": "私立", "difficulty": "高", "accept_rate": "~9.9%", "tuition": "68,237"}, {"cn": "德克萨斯大学奥斯汀分校", "en": "University of Texas at Austin", "lat": 30.285, "lon": -97.735, "file": "University_of_Texas_at_Austin.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "奥斯汀, TX", "type": "公立", "difficulty": "高", "accept_rate": "~29%", "tuition": "$41,930(外州)"}, {"cn": "弗吉尼亚大学", "en": "University of Virginia", "lat": 38.03555556, "lon": -78.50333333, "file": "University_of_Virginia.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "夏洛茨维尔, VA", "type": "公立", "difficulty": "很高", "accept_rate": "~18%", "tuition": "$56,220(外州)"}, {"cn": "华盛顿大学", "en": "University of Washington", "lat": 47.6542, "lon": -122.3081, "file": "University_of_Washington.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "西雅图, WA", "type": "公立", "difficulty": "中等", "accept_rate": "~48%", "tuition": "$42,510(外州)"}, {"cn": "威斯康星大学麦迪逊分校", "en": "University of Wisconsin-Madison", "lat": 43.0753, "lon": -89.4042, "file": "University_of_Wisconsin_Madison.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "麦迪逊, WI", "type": "公立", "difficulty": "中等", "accept_rate": "~43%", "tuition": "$40,612(外州)"}, {"cn": "范德堡大学", "en": "Vanderbilt University", "lat": 36.1475, "lon": -86.8025, "file": "Vanderbilt_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "纳什维尔, TN", "type": "私立", "difficulty": "很高", "accept_rate": "~7.1%", "tuition": "63,946"}, {"cn": "弗吉尼亚理工大学", "en": "Virginia Tech", "lat": 37.2284, "lon": -80.4234, "file": "Virginia_Tech.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "布莱克斯堡, VA", "type": "公立", "difficulty": "中等", "accept_rate": "~56%", "tuition": "$36,546(外州)"}, {"cn": "维克森林大学", "en": "Wake Forest University", "lat": 36.1354, "lon": -80.2773, "file": "Wake_Forest_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "温斯顿-塞勒姆, NC", "type": "私立", "difficulty": "很高", "accept_rate": "~25%", "tuition": "64,758"}, {"cn": "圣路易斯华盛顿大学", "en": "Washington University in St. Louis", "lat": 38.6488, "lon": -90.3051, "file": "Washington_University_in_St__Louis.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "圣路易斯, MO", "type": "私立", "difficulty": "很高", "accept_rate": "~12%", "tuition": "64,500"}, {"cn": "威廉与玛丽学院", "en": "William & Mary", "lat": 37.27083333, "lon": -76.70833333, "file": "William___Mary.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "威廉斯堡, VA", "type": "公立", "difficulty": "高", "accept_rate": "~40%", "tuition": "$49,740(外州)"}, {"cn": "耶鲁大学", "en": "Yale University", "lat": 41.31638889, "lon": -72.92222222, "file": "Yale_University.html", "usn_rank": "N/A", "qs_rank": "N/A", "city": "纽黑文, CT", "type": "私立", "difficulty": "极高", "accept_rate": "~4.5%", "tuition": "64,700"}];
+
+function getTier(usn) {
+  if (!usn || usn === 'N/A') return 'other';
+  var r = parseInt(usn);
+  if (r <= 10) return 'top10';
+  if (r <= 20) return 'top20';
+  if (r <= 30) return 'top30';
+  if (r <= 50) return 'top50';
+  return 'other';
+}
+
+function getColor(tier) {
+  var colors = {
+    'top10': '#e74c3c',
+    'top20': '#e67e22',
+    'top30': '#2ecc71',
+    'top50': '#3498db',
+    'other': '#95a5a6'
+  };
+  return colors[tier] || '#95a5a6';
+}
+
+function getSize(tier) {
+  var sizes = { 'top10': 14, 'top20': 12, 'top30': 10, 'top50': 8, 'other': 7 };
+  return sizes[tier] || 7;
+}
+
+// Create markers by tier
+var markersByTier = { top10:[], top20:[], top30:[], top50:[], other:[] };
+
+SCHOOLS.forEach(function(s) {
+  var tier = getTier(s.usn_rank);
+  var color = getColor(tier);
+  var size = getSize(tier);
+  
+  var usnBadge = s.usn_rank ? '<span class="pop-badge" style="background:#e74c3c">USN #' + s.usn_rank + '</span>' : '';
+  var qsBadge = s.qs_rank ? '<span class="pop-badge" style="background:#3498db">QS #' + s.qs_rank + '</span>' : '';
+  var diffBadge = s.difficulty ? '<span class="pop-badge" style="background:#2c3e50">' + s.difficulty + '</span>' : '';
+  
+  var popup = '<div class="popup-school">' +
+    '<b>' + s.cn + '</b>' +
+    '<div class="pop-en">' + s.en + '</div>' +
+    '<div class="pop-meta">' + usnBadge + qsBadge + diffBadge + '</div>' +
+    (s.city ? '<div>📍 ' + s.city + '</div>' : '') +
+    (s.accept_rate ? '<div>录取率: ' + s.accept_rate + '</div>' : '') +
+    (s.tuition ? '<div>学费: ' + s.tuition + '</div>' : '') +
+    '<a class="pop-link" href="' + s.file + '" target="_blank">📄 查看完整信息 →</a>' +
+    '</div>';
+  
+  var marker = L.circleMarker([s.lat, s.lon], {
+    radius: size,
+    fillColor: color,
+    color: '#fff',
+    weight: 1.5,
+    fillOpacity: 0.85
+  }).bindPopup(popup);
+  
+  marker._tier = tier;
+  markersByTier[tier].push(marker);
+});
+
+// Layer groups
+var allMarkers = L.featureGroup();
+Object.keys(markersByTier).forEach(function(t) {
+  markersByTier[t].forEach(function(m) { allMarkers.addLayer(m); });
+});
+
+// Initialize map
+var map = L.map('map', {
+  center: [39.8, -98.5],
+  zoom: 5,
+  minZoom: 4,
+  maxZoom: 16
+});
+
+// Tile layers
+var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+  maxZoom: 19
+}).addTo(map);
+
+var darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+  maxZoom: 19
+});
+
+// Toggle between light/dark
+var isDark = true;
+darkLayer.addTo(map);
+map.removeLayer(osmLayer);
+
+// Cluster
+var markers = L.markerClusterGroup({
+  maxClusterRadius: 60,
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false
+});
+allMarkers.eachLayer(function(l) { markers.addLayer(l); });
+map.addLayer(markers);
+
+// Fit bounds
+map.fitBounds(allMarkers.getBounds().pad(0.05));
+
+// Legend
+var legend = L.control({position: 'bottomright'});
+legend.onAdd = function() {
+  var div = L.DomUtil.create('div', 'legend');
+  div.innerHTML = '<h4>排名梯队</h4>' +
+    '<i style="background:#e74c3c"></i> Top 10 &nbsp;&nbsp;' +
+    '<i style="background:#e67e22"></i> Top 20<br>' +
+    '<i style="background:#2ecc71"></i> Top 30 &nbsp;&nbsp;' +
+    '<i style="background:#3498db"></i> Top 50<br>' +
+    '<i style="background:#95a5a6"></i> 50+<br>' +
+    '<small style="color:#888">点击圆圈查看详情<br>滚轮缩放 · 拖拽移动</small>';
+  return div;
+};
+legend.addTo(map);
+
+// Filter function
+function filterTier(tier) {
+  // Update buttons
+  document.querySelectorAll('.nav-links a[id^="btn-"]').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  var btn = document.getElementById('btn-' + tier);
+  if (btn) btn.classList.add('active');
+
+  markers.clearLayers();
+  
+  if (tier === 'all') {
+    allMarkers.eachLayer(function(l) { markers.addLayer(l); });
+  } else {
+    markersByTier[tier].forEach(function(m) { markers.addLayer(m); });
+  }
+  
+  document.getElementById('stats').textContent = 
+    '显示 ' + Object.keys(markers._layers).length + ' 所学校';
+  
+  if (Object.keys(markers._layers).length > 0) {
+    var group = L.featureGroup();
+    Object.values(markers._layers).forEach(function(l) { group.addLayer(l); });
+    map.fitBounds(group.getBounds().pad(0.05));
+  }
+}
+
+// Initial stats
+document.getElementById('stats').textContent = '共 ' + SCHOOLS.length + ' 所学校';
+
+// Tile toggle
+var tileControl = L.control({position: 'topleft'});
+tileControl.onAdd = function() {
+  var div = L.DomUtil.create('div', '');
+  div.innerHTML = '<button onclick="toggleTheme()" style="background:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;box-shadow:0 2px 8px rgba(0,0,0,0.2);">🌓 切换地图</button>';
+  return div;
+};
+tileControl.addTo(map);
+
+function toggleTheme() {
+  if (map.hasLayer(darkLayer)) {
+    map.removeLayer(darkLayer);
+    map.addLayer(osmLayer);
+    isDark = false;
+  } else {
+    map.removeLayer(osmLayer);
+    map.addLayer(darkLayer);
+    isDark = true;
+  }
+}
+</script>
+</body>
+</html>

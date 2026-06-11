@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>图片极简测试</title></head>
+<body style="margin:20px;font-family:sans-serif">
+
+<h2>测试A：纯img标签（无CSS容器）</h2>
+<img src="images/Harvard_University.jpg" style="max-width:100%;border:3px solid green;">
+
+<h2>测试B：hero容器 + img</h2>
+<div style="border-radius:18px;overflow:hidden;background:linear-gradient(135deg,#667eea,#764ba2);min-height:300px;display:flex;align-items:center;justify-content:center">
+  <img src="images/Harvard_University.jpg" style="width:100%;height:400px;object-fit:cover;display:block">
+</div>
+
+<h2>测试C：用真实页面CSS</h2>
+<style>
+.hero{border-radius:18px;overflow:hidden;margin-bottom:24px;background:linear-gradient(135deg,#667eea,#764ba2);min-height:300px;display:flex;align-items:center;justify-content:center}
+.hero img{width:100%;height:400px;object-fit:cover;display:block}
+</style>
+<img src="images/Harvard_University.jpg" style="max-width:200px;border:3px solid red;margin-bottom:20px">
+<div class="hero"><img src="images/Harvard_University.jpg" alt="哈佛"></div>
+
+</body>
+</html>
